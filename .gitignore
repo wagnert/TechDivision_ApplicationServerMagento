@@ -1,0 +1,5 @@
+/target
+/.idea
+.sass-cache
+build.properties
+/vendor/

@@ -1,0 +1,13 @@
+{
+    "name": "techdivision/techdivision_applicationsservermagento",
+    "description": "Magento for the ApplicationServer",
+    "version": "0.1.0",
+    "require": {
+    },
+    "authors": [
+        {
+            "name": "Johann Zelger",
+            "email": "jz@techdivision.com"
+        }
+    ]
+}
