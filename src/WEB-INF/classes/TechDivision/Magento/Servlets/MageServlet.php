@@ -27,6 +27,15 @@ use TechDivision\ServletContainer\Servlets\HttpServlet;
 class MageServlet extends HttpServlet
 {
 
+    protected $magentoSessionMapping = array(
+        'core' => 'core/session',
+        'customer_base' => 'customer/session',
+        'catalog' => 'catalog/session',
+        'checkout' => 'checkout/session',
+        'adminhtml' => 'adminhtml/session',
+        'admin' => 'admin/session',
+    );
+
     /**
      * @param Request $req
      * @param Response $res
@@ -34,6 +43,8 @@ class MageServlet extends HttpServlet
      */
     public function doGet(Request $req, Response $res)
     {
+
+        $req->getSession()->start();
 
         /**
          * Compilation includes configuration file
@@ -62,8 +73,6 @@ class MageServlet extends HttpServlet
             exit;
         }
 
-        session_destroy();
-
         require_once $mageFilename;
 
         $req->setServerVar('SCRIPT_FILENAME', $req->getServerVar('DOCUMENT_ROOT') .  DS . 'index.php');
@@ -71,7 +80,6 @@ class MageServlet extends HttpServlet
         $req->setServerVar('PHP_SELF', '/index.php');
 
         $_SERVER = $req->getServerVars();
-
         $_POST = $req->getParameterMap();
         $_GET = $req->getParameterMap();
 
@@ -80,7 +88,7 @@ class MageServlet extends HttpServlet
             $_COOKIE[$key] = $value;
         }
 
-        error_log(var_export($_COOKIE, true));
+        $_SESSION = array();
 
         #Varien_Profiler::enable();
 
@@ -98,10 +106,23 @@ class MageServlet extends HttpServlet
         /* Run store or run website */
         $mageRunType = isset($_SERVER['MAGE_RUN_TYPE']) ? $_SERVER['MAGE_RUN_TYPE'] : 'store';
 
+        error_log(var_export($req->getSession()->getData('frontend'), true));
+
         ob_start();
 
         try {
-            \Mage::run($mageRunCode, $mageRunType);
+            // init magento framework
+            \Mage::init($mageRunCode, $mageRunType);
+
+            // set session data
+            foreach ($this->magentoSessionMapping as $sessionNamespace => $sessionModel) {
+                \Mage::getSingleton($sessionModel)->setData(
+                    $req->getSession()->getData($sessionNamespace)
+                );
+            }
+
+            // run magento framework
+            \Mage::run();
         } catch (\Exception $e) {
 
         }
@@ -123,8 +144,14 @@ class MageServlet extends HttpServlet
             }
         }
 
-        $res->setContent($content);
+        // persist session data
+        foreach ($this->magentoSessionMapping as $sessionNamespace => $sessionModel) {
+            $req->getSession()->putData(
+                $sessionNamespace, \Mage::getSingleton($sessionModel)->getData()
+            );
+        }
 
+        $res->setContent($content);
     }
 
     public function doPost(Request $req, Response $res)
