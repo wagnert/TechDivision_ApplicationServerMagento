@@ -12,8 +12,10 @@
 
 namespace TechDivision\Magento\Servlets;
 
+use TechDivision\Magento\Application\Magento;
 use TechDivision\ServletContainer\Interfaces\Request;
 use TechDivision\ServletContainer\Interfaces\Response;
+use TechDivision\ServletContainer\Interfaces\ServletConfig;
 use TechDivision\ServletContainer\Servlets\HttpServlet;
 
 /**
@@ -27,14 +29,135 @@ use TechDivision\ServletContainer\Servlets\HttpServlet;
 class MageServlet extends HttpServlet
 {
 
-    protected $magentoSessionMapping = array(
-        'core' => 'core/session',
-        'customer_base' => 'customer/session',
-        'catalog' => 'catalog/session',
-        'checkout' => 'checkout/session',
-        'adminhtml' => 'adminhtml/session',
-        'admin' => 'admin/session',
-    );
+    /**
+     * Holds the request object
+     *
+     * @var Request
+     */
+    protected $request;
+
+    /**
+     * Holds the response object
+     *
+     * @var Response
+     */
+    protected $response;
+
+    /**
+     * Holds the magento WebApplication object
+     *
+     * @var Magento
+     */
+    protected $webApplication;
+
+    /**
+     * Initialize WebApplication and Servlet
+     *
+     * @param ServletConfig $config
+     * @return void
+     */
+    public function init(ServletConfig $config) {
+        // call parent init
+        parent::init($config);
+        // register WebApplication
+        $this->webApplication = new Magento();
+    }
+
+    /**
+     * Sets request object
+     *
+     * @param mixed $request
+     */
+    public function setRequest($request)
+    {
+        $this->request = $request;
+    }
+
+    /**
+     * Returns request object
+     *
+     * @return mixed
+     */
+    public function getRequest()
+    {
+        return $this->request;
+    }
+
+    /**
+     * Sets response object
+     *
+     * @param mixed $response
+     */
+    public function setResponse($response)
+    {
+        $this->response = $response;
+    }
+
+    /**
+     * Returns response object
+     *
+     * @return mixed
+     */
+    public function getResponse()
+    {
+        return $this->response;
+    }
+
+    /**
+     * Returns WebApplication object
+     *
+     * @return Magento
+     */
+    public function getWebApplication()
+    {
+        return $this->webApplication;
+    }
+
+    /**
+     * Initialize globals
+     *
+     * @return void
+     */
+    public function initGlobals()
+    {
+        $this->getRequest()->setServerVar(
+            'SCRIPT_FILENAME', $this->getRequest()->getServerVar('DOCUMENT_ROOT') .  DS . 'index.php'
+        );
+        $this->getRequest()->setServerVar('SCRIPT_NAME', '/index.php');
+        $this->getRequest()->setServerVar('PHP_SELF', '/index.php');
+
+        $_SERVER = $this->getRequest()->getServerVars();
+        $_POST = $this->getRequest()->getParameterMap();
+        $_GET = $this->getRequest()->getParameterMap();
+
+        foreach (explode('; ', $this->getRequest()->getHeader('Cookie')) as $cookieLine) {
+            list($key, $value) = explode('=', $cookieLine);
+            $_COOKIE[$key] = $value;
+        }
+        // fillup global session with data to avoid checks on emptyness
+        $_SESSION = array('_' => '_');
+    }
+
+    /**
+     * Set all headers set by WebApplication::run()
+     *
+     * @return void
+     */
+    public function setHeaders()
+    {
+        // grap headers and set to respone object
+        foreach (xdebug_get_headers() as $i => $h) {
+            $h = explode(':', $h, 2);
+            if (isset($h[1])) {
+                $key = trim($h[0]);
+                $value = trim($h[1]);
+                $this->getResponse()->addHeader($key, $value);
+                if ($key == 'Location') {
+                    $this->getResponse()->addHeader('status', 'HTTP/1.1 301');
+                }
+            }
+        }
+    }
 
     /**
      * @param Request $req
@@ -43,117 +166,34 @@ class MageServlet extends HttpServlet
      */
     public function doGet(Request $req, Response $res)
     {
-
-        $req->getSession()->start();
-
-        /**
-         * Compilation includes configuration file
-         */
-        define('MAGENTO_ROOT', '/opt/appserver/webapps/magento');
-
-        $compilerConfig = MAGENTO_ROOT . '/includes/config.php';
-        if (file_exists($compilerConfig)) {
-            include $compilerConfig;
-        }
-
-        $mageFilename = MAGENTO_ROOT . '/app/Mage.php';
-        $maintenanceFile = 'maintenance.flag';
-
-        if (!file_exists($mageFilename)) {
-            if (is_dir('downloader')) {
-                header("Location: downloader");
-            } else {
-                echo $mageFilename." was not found";
-            }
-            exit;
-        }
-
-        if (file_exists($maintenanceFile)) {
-            include_once MAGENTO_ROOT . '/errors/503.php';
-            exit;
-        }
-
-        require_once $mageFilename;
-
-        $req->setServerVar('SCRIPT_FILENAME', $req->getServerVar('DOCUMENT_ROOT') .  DS . 'index.php');
-        $req->setServerVar('SCRIPT_NAME', '/index.php');
-        $req->setServerVar('PHP_SELF', '/index.php');
-
-        $_SERVER = $req->getServerVars();
-        $_POST = $req->getParameterMap();
-        $_GET = $req->getParameterMap();
-
-        foreach (explode('; ', $req->getHeader('Cookie')) as $cookieLine) {
-            list($key, $value) = explode('=', $cookieLine);
-            $_COOKIE[$key] = $value;
-        }
-
-        $_SESSION = array();
-
-        #Varien_Profiler::enable();
-
-        if (isset($_SERVER['MAGE_IS_DEVELOPER_MODE'])) {
-            \Mage::setIsDeveloperMode(true);
-        }
-
-        ini_set('display_errors', 1);
-
-        umask(0);
-
-        /* Store or website code */
-        $mageRunCode = isset($_SERVER['MAGE_RUN_CODE']) ? $_SERVER['MAGE_RUN_CODE'] : '';
-
-        /* Run store or run website */
-        $mageRunType = isset($_SERVER['MAGE_RUN_TYPE']) ? $_SERVER['MAGE_RUN_TYPE'] : 'store';
-
-        error_log(var_export($req->getSession()->getData('frontend'), true));
-
-        ob_start();
-
-        try {
-            // init magento framework
-            \Mage::init($mageRunCode, $mageRunType);
-
-            // set session data
-            foreach ($this->magentoSessionMapping as $sessionNamespace => $sessionModel) {
-                \Mage::getSingleton($sessionModel)->setData(
-                    $req->getSession()->getData($sessionNamespace)
-                );
-            }
-
-            // run magento framework
-            \Mage::run();
-        } catch (\Exception $e) {
-
-        }
-
-        $content = ob_get_contents();
-
-        ob_end_clean();
-
-        // grap headers and set to respone object
-        foreach (xdebug_get_headers() as $i => $h) {
-            $h = explode(':', $h, 2);
-            if (isset($h[1])) {
-                $key = trim($h[0]);
-                $value = trim($h[1]);
-                $res->addHeader($key, $value);
-                if ($key == 'Location') {
-                    $res->addHeader('status', 'HTTP/1.1 301');
-                }
-            }
-        }
-
-        // persist session data
-        foreach ($this->magentoSessionMapping as $sessionNamespace => $sessionModel) {
-            $req->getSession()->putData(
-                $sessionNamespace, \Mage::getSingleton($sessionModel)->getData()
-            );
-        }
-
-        $res->setContent($content);
+        // register request and response objects
+        $this->setRequest($req);
+        $this->setResponse($res);
+        // start session
+        $this->getRequest()->getSession()->start();
+        // put session object to WebApplication
+        $this->getWebApplication()->setSession($this->getRequest()->getSession());
+        // set root dir in WebApplication
+        $this->getWebApplication()->setRootDir($this->getServletConfig()->getWebappPath());
+        // load WebApplication
+        $this->getWebApplication()->load();
+        // init globals
+        $this->initGlobals();
+        // init WebApplication
+        $this->getWebApplication()->init();
+        // run WebApplication
+        $content = $this->getWebApplication()->run();
+        // set all those headers set by WebApplication run
+        $this->setHeaders();
+        // set content
+        $this->getResponse()->setContent($content);
     }
 
+    /**
+     * @see
+     * @param Request $req
+     * @param Response $res
+     */
     public function doPost(Request $req, Response $res)
     {
         $this->doGet($req, $res);
