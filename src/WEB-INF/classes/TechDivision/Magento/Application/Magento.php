@@ -171,10 +171,10 @@ class Magento
         // load session data
         foreach ($this->sessionMapping as $sessionNamespace => $sessionModel) {
             \Mage::getSingleton($sessionModel)->setData(
-                '___', '___'
+                $this->getSession()->getData($sessionNamespace)
             );
             \Mage::getSingleton($sessionModel)->setData(
-                $this->getSession()->getData($sessionNamespace)
+                '___', '___'
             );
         }
 
