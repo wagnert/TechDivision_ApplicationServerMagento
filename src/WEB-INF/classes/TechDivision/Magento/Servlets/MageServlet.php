@@ -13,6 +13,7 @@
 namespace TechDivision\Magento\Servlets;
 
 use TechDivision\Magento\Application\Magento;
+use TechDivision\ServletContainer\Http\PostRequest;
 use TechDivision\ServletContainer\Interfaces\Request;
 use TechDivision\ServletContainer\Interfaces\Response;
 use TechDivision\ServletContainer\Interfaces\ServletConfig;
@@ -121,21 +122,28 @@ class MageServlet extends HttpServlet
     public function initGlobals()
     {
         $this->getRequest()->setServerVar(
-            'SCRIPT_FILENAME', $this->getRequest()->getServerVar('DOCUMENT_ROOT') .  DS . 'index.php'
+            'SCRIPT_FILENAME', $this->getRequest()->getServerVar('DOCUMENT_ROOT') .  DIRECTORY_SEPARATOR . 'index.php'
         );
         $this->getRequest()->setServerVar('SCRIPT_NAME', '/index.php');
         $this->getRequest()->setServerVar('PHP_SELF', '/index.php');
 
         $_SERVER = $this->getRequest()->getServerVars();
-        $_POST = $this->getRequest()->getParameterMap();
-        $_GET = $this->getRequest()->getParameterMap();
+
+        // check post type and set params to globals
+        if ($this->getRequest() instanceof PostRequest) {
+            $_POST = $this->getRequest()->getParameterMap();
+            // check if there are get params send via uri
+            parse_str($this->getRequest()->getQueryString(), $_GET);
+        } else {
+            $_GET = $this->getRequest()->getParameterMap();
+        }
+
+        $_REQUEST = $this->getRequest()->getParameterMap();
 
         foreach (explode('; ', $this->getRequest()->getHeader('Cookie')) as $cookieLine) {
             list($key, $value) = explode('=', $cookieLine);
             $_COOKIE[$key] = $value;
         }
-        // fillup global session with data to avoid checks on emptyness
-        $_SESSION = array('_' => '_');
     }
 
     /**
@@ -179,11 +187,17 @@ class MageServlet extends HttpServlet
         $this->getWebApplication()->load();
         // init globals
         $this->initGlobals();
+
+        $startTime = microtime(true);
         // init WebApplication
         $this->getWebApplication()->init();
         // run WebApplication
         $content = $this->getWebApplication()->run();
+
+        $endTime = microtime(true);
+        $deltaTime = $endTime - $startTime;
         // set all those headers set by WebApplication run
+
         $this->setHeaders();
         // set content
         $this->getResponse()->setContent($content);
