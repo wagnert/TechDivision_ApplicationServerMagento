@@ -315,8 +315,6 @@ abstract class Zend_Controller_Response_Abstract
      */
     public function canSendHeaders($throw = false)
     {
-        error_log(__METHOD__ . " => called @ ". xdebug_call_file(). ":". xdebug_call_line(). " from ". xdebug_call_function());
-
         // $ok = headers_sent($file, $line);
         $ok = false;
 

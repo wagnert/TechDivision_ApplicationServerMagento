@@ -70,7 +70,6 @@ class Varien_Autoload
      */
     static public function register()
     {
-        error_log(__DIR__ . "\n" . __METHOD__ . ':' . __LINE__);
         // spl_autoload_register(array(self::instance(), 'autoload'));
     }
 
