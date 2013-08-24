@@ -108,8 +108,8 @@
 				--db_name ${mysql.database}
 				--db_user ${mysql.username}
 				--db_pass ${mysql.password}
-				--url 'http://magento.local:8586'
-				--secure_base_url 'http://magento.local:8586'
+				--url 'http://127.0.0.1:8586/${webapp.name}'
+				--secure_base_url 'http://127.0.0.1:8586/${webapp.name}'
 				--use_rewrites no
 				--skip_url_validation yes
 				--use_secure no

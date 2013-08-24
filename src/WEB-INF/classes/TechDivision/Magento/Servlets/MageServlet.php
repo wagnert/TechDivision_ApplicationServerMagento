@@ -121,13 +121,35 @@ class MageServlet extends HttpServlet
      */
     public function initGlobals()
     {
-        $this->getRequest()->setServerVar(
-            'SCRIPT_FILENAME', $this->getRequest()->getServerVar('DOCUMENT_ROOT') .  DIRECTORY_SEPARATOR . 'index.php'
-        );
-        $this->getRequest()->setServerVar('SCRIPT_NAME', '/index.php');
-        $this->getRequest()->setServerVar('PHP_SELF', '/index.php');
+        // if the application has NOT been called over a VHost configuration append application folder naem
+        if (!$this->getServletConfig()->getApplication()->isVhostOf($this->getRequest()->getServerName())) {
+            $this->getRequest()->setServerVar(
+                'SCRIPT_FILENAME',
+                $this->getRequest()->getServerVar('DOCUMENT_ROOT') .
+                DIRECTORY_SEPARATOR . $this->getServletConfig()->getApplication()->getName() .
+                DIRECTORY_SEPARATOR . 'index.php'
+            );
+            $this->getRequest()->setServerVar(
+                'SCRIPT_NAME',
+                DIRECTORY_SEPARATOR . $this->getServletConfig()->getApplication()->getName() .
+                DIRECTORY_SEPARATOR . 'index.php'
+            );
+            $this->getRequest()->setServerVar(
+                'PHP_SELF',
+                DIRECTORY_SEPARATOR . $this->getServletConfig()->getApplication()->getName() .
+                DIRECTORY_SEPARATOR . 'index.php'
+            );
+        } else {
+            $this->getRequest()->setServerVar(
+                'SCRIPT_FILENAME', $this->getRequest()->getServerVar('DOCUMENT_ROOT') .  DIRECTORY_SEPARATOR . 'index.php'
+            );
+            $this->getRequest()->setServerVar('SCRIPT_NAME', '/index.php');
+            $this->getRequest()->setServerVar('PHP_SELF', '/index.php');
+        }
 
         $_SERVER = $this->getRequest()->getServerVars();
+
+        error_log(var_export($_SERVER, true));
 
         // check post type and set params to globals
         if ($this->getRequest() instanceof PostRequest) {
