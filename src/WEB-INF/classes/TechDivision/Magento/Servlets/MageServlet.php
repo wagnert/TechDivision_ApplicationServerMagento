@@ -173,6 +173,12 @@ class MageServlet extends HttpServlet
      */
     public function setHeaders()
     {
+        // set default headers for magento usage
+        $this->getResponse()->addHeader('X-Powered-By', 'MageServlet/0.1.0');
+        $this->getResponse()->addHeader('Expires', '19 Nov 1981 08:52:00 GMT');
+        $this->getResponse()->addHeader('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
+        $this->getResponse()->addHeader('Pragma', 'no-cache');
+
         // grap headers and set to respone object
         foreach (xdebug_get_headers() as $i => $h) {
             $h = explode(':', $h, 2);
@@ -185,6 +191,7 @@ class MageServlet extends HttpServlet
                 }
             }
         }
+
     }
 
     /**
