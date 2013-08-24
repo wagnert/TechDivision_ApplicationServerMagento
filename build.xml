@@ -62,6 +62,83 @@
     </target>
 
     <!-- ==================================================================== -->
+    <!-- Deletes the magento instance for testing purpose   			 	  -->
+    <!-- ==================================================================== -->
+    <target name="delete-instance">
+        <delete dir="${deploy.dir}/${webapp.name}" includeemptydirs="true" quiet="false" verbose="false" failonerror="true"/>
+        <delete dir="${basedir}/instance-src" includeemptydirs="true" quiet="false" verbose="false" failonerror="true"/>
+    </target>
+        	
+	<!-- ==================================================================== -->
+	<!-- Initializing a magento instance for testing purpose   			 	  -->
+	<!-- ==================================================================== -->
+	<target name="init-instance" unless="${instance.present}" description="Creats a magento instance for testing purpose">
+        <!-- prepare the folder structure -->
+        <antcall target="prepare" />
+        <!-- delete the old instance -->
+        <echo message="Delete existing Magento CE ${magento.version} source..."/>
+        <antcall target="delete-instance"/>
+        <!-- download the magento sources -->
+		<echo message="Preparing Magento CE ${magento.version} source..."/>
+		<antcall target="get-magento-src" />
+        <!-- initialize the database -->
+		<echo message="Initialize database ${mysql.database}..." />
+		<exec executable="mysql">
+			<arg line="-h${mysql.host}"/>
+			<arg line="-u${mysql.username}"/>
+			<arg line="-p${mysql.password}"/>
+			<arg line="-e'DROP DATABASE IF EXISTS ${mysql.database};create database ${mysql.database}'"/>
+		</exec>
+		<antcall target="finalize-instance-installation"/>
+		<antcall target="deploy"/>
+	</target>
+	
+	<!-- ==================================================================== -->
+	<!-- Finalize installation of magento instance			   			 	  -->
+	<!-- ==================================================================== -->
+	<target name="finalize-instance-installation">
+		<echo message="Installing instance ${instance.url}..." />
+		<exec dir="${deploy.dir}/${webapp.name}" executable="php">
+			<arg line="-f install.php --
+				--license_agreement_accepted yes
+				--locale 'en_US'
+				--timezone 'Europe/Berlin'
+				--default_currency EUR
+				--db_host '${mysql.host}'
+				--db_name ${mysql.database}
+				--db_user ${mysql.username}
+				--db_pass ${mysql.password}
+				--url 'http://magento.local:8586'
+				--secure_base_url 'http://magento.local:8586'
+				--use_rewrites no
+				--skip_url_validation yes
+				--use_secure no
+				--use_secure_admin no
+				--admin_lastname io
+				--admin_firstname appserver
+                --admin_email 'info@appserver.io'
+				--admin_username appserver
+				--admin_password appserver.i0
+			"/>
+		</exec>
+		<delete file="${deploy.dir}/${webapp.name}/app/etc/use_cache.ser" />
+		<exec dir="${basedir}" executable="/bin/ln" >
+			<arg value="-s"/>
+			<arg value="${deploy.dir}/${webapp.name}"/>
+			<arg value="instance-src"/>
+		</exec>
+	</target>
+
+	<!-- ==================================================================== -->
+	<!-- Get Magento sources by given version number		  		 	  	  -->
+	<!-- ==================================================================== -->
+	<target name="get-magento-src">
+		<exec dir="${deploy.dir}" executable="git">
+			<arg line="clone -b magento-ce-${magento.version} https://github.com/speedupmate/Magento-CE-Mirror.git ${webapp.name}"/>
+		</exec>
+	</target>
+
+    <!-- ==================================================================== -->
     <!-- Generates the API documentation                                      -->
     <!-- ==================================================================== -->
     <target name="apidoc" description="Generates the API documentation.">
