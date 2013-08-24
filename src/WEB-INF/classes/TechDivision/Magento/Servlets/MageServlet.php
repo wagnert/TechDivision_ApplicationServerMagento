@@ -149,8 +149,6 @@ class MageServlet extends HttpServlet
 
         $_SERVER = $this->getRequest()->getServerVars();
 
-        error_log(var_export($_SERVER, true));
-
         // check post type and set params to globals
         if ($this->getRequest() instanceof PostRequest) {
             $_POST = $this->getRequest()->getParameterMap();
