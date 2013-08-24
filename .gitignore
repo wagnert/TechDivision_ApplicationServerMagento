@@ -4,3 +4,6 @@
 build.properties
 /vendor/
 /instance-src
+.buildpath
+.project
+.settings/
