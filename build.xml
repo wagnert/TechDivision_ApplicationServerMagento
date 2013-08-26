@@ -51,6 +51,7 @@
     <!-- Copies the sources to the deploy directory     					  -->
     <!-- ==================================================================== -->
     <target name="deploy" depends="copy" description="Copies the sources to the deploy directory.">
+		<echo message="Copy sources to ${instance.dir} ..." />
         <copy todir="${deploy.dir}" preservelastmodified="true" overwrite="true">
             <fileset dir="${php-target.dir}">
                 <include name="**/*"/>
@@ -64,41 +65,43 @@
     <!-- ==================================================================== -->
     <!-- Deletes the magento instance for testing purpose   			 	  -->
     <!-- ==================================================================== -->
-    <target name="delete-instance">
-        <delete dir="${deploy.dir}/${webapp.name}" includeemptydirs="true" quiet="false" verbose="false" failonerror="true"/>
+    <target name="delete-instance" description="Deletes the magento instance for testing purpose.">
+        <echo message="Delete existing sources in ${instance.dir}..."/>
+        <delete dir="${instance.dir}" includeemptydirs="true" quiet="false" verbose="false" failonerror="true"/>
         <delete dir="${basedir}/instance-src" includeemptydirs="true" quiet="false" verbose="false" failonerror="true"/>
     </target>
         	
 	<!-- ==================================================================== -->
 	<!-- Initializing a magento instance for testing purpose   			 	  -->
 	<!-- ==================================================================== -->
-	<target name="init-instance" unless="${instance.present}" description="Creats a magento instance for testing purpose">
-        <!-- prepare the folder structure -->
+	<target name="init-instance" description="Creats a magento instance for testing purpose">
         <antcall target="prepare" />
-        <!-- delete the old instance -->
-        <echo message="Delete existing Magento CE ${magento.version} source..."/>
         <antcall target="delete-instance"/>
-        <!-- download the magento sources -->
-		<echo message="Preparing Magento CE ${magento.version} source..."/>
-		<antcall target="get-magento-src" />
-        <!-- initialize the database -->
-		<echo message="Initialize database ${mysql.database}..." />
+		<antcall target="get-magento-src"/>
+		<antcall target="create-database"/>
+		<antcall target="finalize-instance-installation"/>
+		<antcall target="deploy"/>
+	</target>
+	
+	<!-- ==================================================================== -->
+	<!-- Deletes + creates the Magento database   			 	  			  -->
+	<!-- ==================================================================== -->
+	<target name="create-database" description="Deletes + creates the Magento database.">
+		<echo message="Initialize database ${mysql.database} ..." />
 		<exec executable="mysql">
 			<arg line="-h${mysql.host}"/>
 			<arg line="-u${mysql.username}"/>
 			<arg line="-p${mysql.password}"/>
 			<arg line="-e'DROP DATABASE IF EXISTS ${mysql.database};create database ${mysql.database}'"/>
 		</exec>
-		<antcall target="finalize-instance-installation"/>
-		<antcall target="deploy"/>
 	</target>
 	
 	<!-- ==================================================================== -->
 	<!-- Finalize installation of magento instance			   			 	  -->
 	<!-- ==================================================================== -->
-	<target name="finalize-instance-installation">
-		<echo message="Installing instance ${instance.url}..." />
-		<exec dir="${deploy.dir}/${webapp.name}" executable="php">
+	<target name="finalize-instance-installation" description="Finalize installation of magento instance.">
+		<echo message="Installing instance ${instance.url} ..." />
+		<exec dir="${instance.dir}" executable="php">
 			<arg line="-f install.php --
 				--license_agreement_accepted yes
 				--locale 'en_US'
@@ -108,8 +111,8 @@
 				--db_name ${mysql.database}
 				--db_user ${mysql.username}
 				--db_pass ${mysql.password}
-				--url 'http://127.0.0.1:8586/${webapp.name}'
-				--secure_base_url 'http://127.0.0.1:8586/${webapp.name}'
+				--url '${instance.url}'
+				--secure_base_url '${instance.url}'
 				--use_rewrites no
 				--skip_url_validation yes
 				--use_secure no
@@ -121,98 +124,22 @@
 				--admin_password appserver.i0
 			"/>
 		</exec>
-		<delete file="${deploy.dir}/${webapp.name}/app/etc/use_cache.ser" />
+		<delete file="${instance.dir}/app/etc/use_cache.ser" />
 		<exec dir="${basedir}" executable="/bin/ln" >
-			<arg value="-s"/>
-			<arg value="${deploy.dir}/${webapp.name}"/>
-			<arg value="instance-src"/>
+			<arg line="-s ${instance.dir} instance-src"/>
 		</exec>
 	</target>
 
 	<!-- ==================================================================== -->
 	<!-- Get Magento sources by given version number		  		 	  	  -->
 	<!-- ==================================================================== -->
-	<target name="get-magento-src">
+	<target name="get-magento-src" description="Get Magento sources by given version number.">
+        <!-- cloning Magento sources -->
+		<echo message="Clone and prepare Magento CE ${magento.version} source ..."/>
 		<exec dir="${deploy.dir}" executable="git">
-			<arg line="clone -b magento-ce-${magento.version} https://github.com/speedupmate/Magento-CE-Mirror.git ${webapp.name}"/>
+			<arg line="clone -b magento-ce-${magento.version} ${magento.repository} ${webapp.name}"/>
 		</exec>
+		<delete dir="${instance.dir}/.git"/>
 	</target>
-
-    <!-- ==================================================================== -->
-    <!-- Generates the API documentation                                      -->
-    <!-- ==================================================================== -->
-    <target name="apidoc" description="Generates the API documentation.">
-        <exec executable="phpdoc">
-            <arg line="-ct type -ue on -s on -t ${php-target.dir}/docs -o HTML:frames:earthli -d ${php-src.dir}/app/code/core"/>
-        </exec>
-    </target>
-
-    <!-- ==================================================================== -->
-    <!-- Runs the code sniffer and generates a report                         -->
-    <!-- ==================================================================== -->
-    <target name="phpcs" depends="apidoc" description="Runs the code sniffer and generates a report.">
-        <exec executable="phpcs" output="${php-target.dir}/reports/checkstyle.xml">
-            <arg line="--standard=ZEND --report=checkstyle ${php-src.dir}"/>
-        </exec>
-    </target>
-
-    <!-- ==================================================================== -->
-    <!-- Runs the copy and paste detection                                    -->
-    <!-- ==================================================================== -->
-    <target name="phpcpd" depends="phpcs" description="Runs the copy and paste detection.">
-        <exec executable="phpcpd">
-            <arg line="--log-pmd ${php-target.dir}/reports/pmd-cpd.xml ${php-src.dir}"/>
-        </exec>
-    </target>
-
-    <!-- ==================================================================== -->
-    <!-- Generate phploc.csv                                                  -->
-    <!-- ==================================================================== -->
-    <target name="phploc" depends="phpcpd" description="Generate phploc.csv">
-        <exec executable="phploc">
-            <arg line="--log-xml ${php-target.dir}/reports/phploc.xml ${php-src.dir}"/>
-        </exec>
-    </target>
-
-    <!-- ==================================================================== -->
-    <!-- Runs the PHPDepend tool and generats a graphs                        -->
-    <!-- ==================================================================== -->
-    <target name="pdepend" depends="phploc" description="Runs the PHPDepend tool and generats a graphs.">
-        <exec executable="pdepend">
-            <arg line="--summary-xml=${php-target.dir}/reports/pdepend.xml --jdepend-xml=${php-target.dir}/reports/jdepend.xml --jdepend-chart=${php-target.dir}/reports/jdepend.svg --overview-pyramid=${php-target.dir}/reports/pdepend-pyramid.svg ${php-src.dir}" />
-        </exec>
-    </target>
-
-    <!-- ==================================================================== -->
-    <!-- Runs the PHP mess detector tool                                      -->
-    <!-- ==================================================================== -->
-    <target name="phpmd" depends="pdepend" description="Runs the PHP Mess detector tool.">
-        <exec executable="phpmd">
-            <arg line="${php-src.dir} xml codesize,unusedcode --reportfile ${php-target.dir}/reports/pmd.xml" />
-        </exec>
-    </target>
-
-    <!-- ==================================================================== -->
-    <!-- Copies the test sources to the target directory					  -->
-    <!-- ==================================================================== -->
-    <target name="copy-tests" depends="copy" description="Copies the test sources to the target directory.">
-        <copy todir="${php-target.dir}">
-            <fileset dir="${php-test.dir}">
-                <include name="**/*" />
-            </fileset>
-            <filterchain>
-                <expandproperties/>
-            </filterchain>
-        </copy>
-    </target>
-
-    <!-- ==================================================================== -->
-    <!-- Runs the PHPUnit tests and generates a report                        -->
-    <!-- ==================================================================== -->
-    <target name="run-tests" depends="copy-tests" description="Runs the PHPUnit tests and generates a report.">
-        <exec executable="phpunit" dir="${php-target.dir}">
-            <arg line="--bootstrap bootstrap.php --configuration phpunit.xml.dist" />
-        </exec>
-    </target>
 
 </project>
