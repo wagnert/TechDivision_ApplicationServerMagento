@@ -17,7 +17,7 @@ use TechDivision\ServletContainer\Http\PostRequest;
 use TechDivision\ServletContainer\Interfaces\Request;
 use TechDivision\ServletContainer\Interfaces\Response;
 use TechDivision\ServletContainer\Interfaces\ServletConfig;
-use TechDivision\ServletContainer\Servlets\HttpServlet;
+use TechDivision\ServletContainer\Servlets\PhpServlet;
 
 /**
  * @package     TechDivision\Magento
@@ -27,22 +27,8 @@ use TechDivision\ServletContainer\Servlets\HttpServlet;
  * @author      Johann Zelger <jz@techdivision.com>
  */
 
-class MageServlet extends HttpServlet
+class MageServlet extends PhpServlet
 {
-
-    /**
-     * Holds the request object
-     *
-     * @var Request
-     */
-    protected $request;
-
-    /**
-     * Holds the response object
-     *
-     * @var Response
-     */
-    protected $response;
 
     /**
      * Holds the magento WebApplication object
@@ -60,48 +46,9 @@ class MageServlet extends HttpServlet
     public function init(ServletConfig $config) {
         // call parent init
         parent::init($config);
+
         // register WebApplication
         $this->webApplication = new Magento();
-    }
-
-    /**
-     * Sets request object
-     *
-     * @param mixed $request
-     */
-    public function setRequest($request)
-    {
-        $this->request = $request;
-    }
-
-    /**
-     * Returns request object
-     *
-     * @return mixed
-     */
-    public function getRequest()
-    {
-        return $this->request;
-    }
-
-    /**
-     * Sets response object
-     *
-     * @param mixed $response
-     */
-    public function setResponse($response)
-    {
-        $this->response = $response;
-    }
-
-    /**
-     * Returns response object
-     *
-     * @return mixed
-     */
-    public function getResponse()
-    {
-        return $this->response;
     }
 
     /**
@@ -121,7 +68,7 @@ class MageServlet extends HttpServlet
      */
     public function initGlobals()
     {
-        // if the application has NOT been called over a VHost configuration append application folder naem
+        // if the application has not been called over a vhost configuration append application folder name
         if (!$this->getServletConfig()->getApplication()->isVhostOf($this->getRequest()->getServerName())) {
             $this->getRequest()->setServerVar(
                 'SCRIPT_FILENAME',
@@ -148,6 +95,7 @@ class MageServlet extends HttpServlet
         }
 
         $_SERVER = $this->getRequest()->getServerVars();
+        $_SERVER['SERVER_PORT'] = NULL;
 
         // check post type and set params to globals
         if ($this->getRequest() instanceof PostRequest) {
@@ -164,34 +112,6 @@ class MageServlet extends HttpServlet
             list($key, $value) = explode('=', $cookieLine);
             $_COOKIE[$key] = $value;
         }
-    }
-
-    /**
-     * Set all headers set by WebApplication::run()
-     *
-     * @return void
-     */
-    public function setHeaders()
-    {
-        // set default headers for magento usage
-        $this->getResponse()->addHeader('X-Powered-By', 'MageServlet/0.1.0');
-        $this->getResponse()->addHeader('Expires', '19 Nov 1981 08:52:00 GMT');
-        $this->getResponse()->addHeader('Cache-Control', 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0');
-        $this->getResponse()->addHeader('Pragma', 'no-cache');
-
-        // grap headers and set to respone object
-        foreach (xdebug_get_headers() as $i => $h) {
-            $h = explode(':', $h, 2);
-            if (isset($h[1])) {
-                $key = trim($h[0]);
-                $value = trim($h[1]);
-                $this->getResponse()->addHeader($key, $value);
-                if ($key == 'Location') {
-                    $this->getResponse()->addHeader('status', 'HTTP/1.1 301');
-                }
-            }
-        }
-
     }
 
     /**
@@ -214,17 +134,11 @@ class MageServlet extends HttpServlet
         $this->getWebApplication()->load();
         // init globals
         $this->initGlobals();
-
-        $startTime = microtime(true);
         // init WebApplication
         $this->getWebApplication()->init();
         // run WebApplication
         $content = $this->getWebApplication()->run();
-
-        $endTime = microtime(true);
-        $deltaTime = $endTime - $startTime;
-        // set all those headers set by WebApplication run
-
+        // set headers
         $this->setHeaders();
         // set content
         $this->getResponse()->setContent($content);

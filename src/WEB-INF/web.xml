@@ -37,12 +37,22 @@
 
     <servlet-mapping>
         <servlet-name>PhpServlet</servlet-name>
-        <url-pattern>/*.php</url-pattern>
+        <url-pattern>/errors/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>PhpServlet</servlet-name>
+        <url-pattern>/downloader/*</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>
         <servlet-name>StaticResourceServlet</servlet-name>
         <url-pattern>/skin/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>StaticResourceServlet</servlet-name>
+        <url-pattern>/errors/default/*</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>
