@@ -67,7 +67,7 @@
     <!-- ==================================================================== -->
     <target name="delete-instance" description="Deletes the magento instance for testing purpose.">
         <echo message="Delete existing sources in ${instance.dir}..."/>
-        <delete dir="${instance.dir}" includeemptydirs="true" quiet="false" verbose="false" failonerror="true"/>
+        <delete dir="${instance.dir}" includeemptydirs="true" quiet="false" verbose="false" failonerror="true" followsymlinks="false"/>
         <delete dir="${basedir}/instance-src" includeemptydirs="true" quiet="false" verbose="false" failonerror="true"/>
     </target>
         	
