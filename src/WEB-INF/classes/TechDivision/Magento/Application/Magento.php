@@ -152,6 +152,8 @@ class Magento
         /* Run store or run website */
         $mageRunType = isset($_SERVER['MAGE_RUN_TYPE']) ? $_SERVER['MAGE_RUN_TYPE'] : 'store';
         try {
+            // set headers sent to false
+            appserver_set_headers_sent(false);
             // init magento framework
             \Mage::init($mageRunCode, $mageRunType);
         } catch (\Exception $e) {
@@ -176,6 +178,8 @@ class Magento
         ob_start();
 
         try {
+            // set headers sent to false
+            appserver_set_headers_sent(false);
             // run magento framework
             \Mage::run();
         } catch (\Mage_Core_Exception $e) {
