@@ -33,101 +33,28 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
     const VALIDATOR_HTTP_VIA_KEY                = 'http_via';
     const VALIDATOR_REMOTE_ADDR_KEY             = 'remote_addr';
 
+    protected $_namespace;
+    protected $_sessionName;
+    
     /**
      * Configure and start session
      *
      * @param string $sessionName
      * @return Mage_Core_Model_Session_Abstract_Varien
      */
-    public function start($sessionName=null)
+    public function start()
     {
-        //if (isset($_SESSION)) {
+        
+        if ($this->_sessionName == null) {
+            error_log("Found empty session name");
             return $this;
-        //}
-
-        switch($this->getSessionSaveMethod()) {
-            case 'db':
-                ini_set('session.save_handler', 'user');
-                $sessionResource = Mage::getResourceSingleton('core/session');
-                /* @var $sessionResource Mage_Core_Model_Mysql4_Session */
-                $sessionResource->setSaveHandler();
-                break;
-            case 'memcache':
-                ini_set('session.save_handler', 'memcache');
-                session_save_path($this->getSessionSavePath());
-                break;
-            case 'memcached':
-                ini_set('session.save_handler', 'memcached');
-                session_save_path($this->getSessionSavePath());
-                break;
-            case 'eaccelerator':
-                ini_set('session.save_handler', 'eaccelerator');
-                break;
-            default:
-                session_module_name($this->getSessionSaveMethod());
-                if (is_writable($this->getSessionSavePath())) {
-                    session_save_path($this->getSessionSavePath());
-                }
-                break;
         }
-        $cookie = $this->getCookie();
-        if (Mage::app()->getStore()->isAdmin()) {
-            $sessionMaxLifetime = Mage_Core_Model_Resource_Session::SEESION_MAX_COOKIE_LIFETIME;
-            $adminSessionLifetime = (int)Mage::getStoreConfig('admin/security/session_cookie_lifetime');
-            if ($adminSessionLifetime > $sessionMaxLifetime) {
-                $adminSessionLifetime = $sessionMaxLifetime;
-            }
-            if ($adminSessionLifetime > 60) {
-                $cookie->setLifetime($adminSessionLifetime);
-            }
-        }
-
-        // session cookie params
-        $cookieParams = array(
-            'lifetime' => $cookie->getLifetime(),
-            'path'     => $cookie->getPath(),
-            'domain'   => $cookie->getConfigDomain(),
-            'secure'   => $cookie->isSecure(),
-            'httponly' => $cookie->getHttponly()
-        );
-
-        if (!$cookieParams['httponly']) {
-            unset($cookieParams['httponly']);
-            if (!$cookieParams['secure']) {
-                unset($cookieParams['secure']);
-                if (!$cookieParams['domain']) {
-                    unset($cookieParams['domain']);
-                }
-            }
-        }
-
-        if (isset($cookieParams['domain'])) {
-            $cookieParams['domain'] = $cookie->getDomain();
-        }
-
-        call_user_func_array('session_set_cookie_params', $cookieParams);
-
-        if (!empty($sessionName)) {
-            $this->setSessionName($sessionName);
-        }
-
-        // potential custom logic for session id (ex. switching between hosts)
-        $this->setSessionId();
 
         Varien_Profiler::start(__METHOD__.'/start');
-        $sessionCacheLimiter = Mage::getConfig()->getNode('global/session_cache_limiter');
-        if ($sessionCacheLimiter) {
-            session_cache_limiter((string)$sessionCacheLimiter);
-        }
 
-        //session_start();
-
-        /**
-         * Renew cookie expiration time if session id did not change
-         */
-        if ($cookie->get(session_name()) == $this->getSessionId()) {
-            $cookie->renew(session_name());
-        }
+        $req = Mage::registry('original_request');
+        $session = $req->getSession($this->_sessionName)->start();
+        
         Varien_Profiler::stop(__METHOD__.'/start');
 
         return $this;
@@ -162,19 +89,70 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
      */
     public function init($namespace, $sessionName=null)
     {
-        /*
-        //if (!isset($_SESSION)) {
-        //    $this->start($sessionName);
-        //}
-        if (!isset($_SESSION[$namespace])) {
-            $_SESSION[$namespace] = array();
+        
+        /**
+         * Defines session mapping
+         *
+         * @var array
+         */
+        $sessionMapping = array(
+            'core' => 'frontend',
+            'customer_base' => 'frontend',
+            'catalog' => 'frontend',
+            'checkout' => 'frontend',
+            'reports' => 'frontend',
+            'store_default' => 'frontend',
+            'adminhtml' => 'adminhtml',
+            'admin' => 'adminhtml'
+        );
+        
+        $this->_namespace = $namespace;
+        
+        if ($sessionName == null) {
+            $this->_sessionName = $sessionMapping[$this->_namespace];
+        } else {
+            $this->_sessionName = $sessionName;
         }
+        
+        $req = Mage::registry('original_request');
+        $session = $req->getSession($this->_sessionName);
+        
+        if ($session->isStarted() === false) {
+            $this->start($this->_sessionName);
+            
+        }
+        
+        if ($session->getData($this->_namespace) === false) {
+            $session->setData($this->_namespace, array());
+        }
+        
+        return $this;
+    }
 
-        // $this->_data = &$_SESSION[$namespace];
+    /**
+     * Overwrite data in the object.
+     *
+     * $key can be string or array.
+     * If $key is string, the attribute value will be overwritten by $value
+     *
+     * If $key is an array, it will overwrite all the data in the object.
+     *
+     * @param string|array $key
+     * @param mixed $value
+     * @return Varien_Object
+     */
+    public function setData($key, $value=null)
+    {
+        error_log(__METHOD__ . ':' . __LINE__);
 
-        $this->validate();
-        $this->revalidateCookie();
-        */
+        $req = Mage::registry('original_request');
+        $session = $req->getSession($this->_sessionName);
+        
+        $data = $session->getData($this->_namespace);
+        $data[$key] = $value;
+        
+        $session->putData($this->_namespace, $data);
+        
         return $this;
     }
 
@@ -187,11 +165,10 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
      */
     public function getData($key='', $clear = false)
     {
-        $data = parent::getData($key);
-        if ($clear && isset($this->_data[$key])) {
-            unset($this->_data[$key]);
-        }
-        return $data;
+        $req = Mage::registry('original_request');
+        $session = $req->getSession($this->_sessionName);
+        $data = $session->getData($this->_namespace);
+        return $data[$key];
     }
 
     /**
@@ -201,7 +178,8 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
      */
     public function getSessionId()
     {
-        return session_id();
+        $req = Mage::registry('original_request');
+        return $req->getSession($this->_sessionName)->getId();
     }
 
     /**
@@ -212,9 +190,6 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
      */
     public function setSessionId($id=null)
     {
-        if (!is_null($id) && preg_match('#^[0-9a-zA-Z,-]+$#', $id)) {
-            session_id($id);
-        }
         return $this;
     }
 
@@ -225,7 +200,7 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
      */
     public function getSessionName()
     {
-        return session_name();
+        return $this->_sessionName;
     }
 
     /**
@@ -236,7 +211,6 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
      */
     public function setSessionName($name)
     {
-        session_name($name);
         return $this;
     }
 
@@ -433,7 +407,6 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
      */
     public function regenerateSessionId()
     {
-        session_regenerate_id(true);
         return $this;
     }
 }
