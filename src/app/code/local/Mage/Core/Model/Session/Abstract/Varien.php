@@ -143,7 +143,6 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
      */
     public function setData($key, $value=null)
     {
-        error_log(__METHOD__ . ':' . __LINE__);
 
         $req = Mage::registry('original_request');
         $session = $req->getSession($this->_sessionName);
