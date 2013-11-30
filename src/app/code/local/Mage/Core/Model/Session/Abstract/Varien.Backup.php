@@ -103,8 +103,33 @@ class Mage_Core_Model_Session_Abstract_Varien extends Varien_Object
             'reports' => 'frontend',
             'store_default' => 'frontend',
             'adminhtml' => 'adminhtml',
-            'admin' => 'adminhtml'
+            'admin' => 'adminhtml',
+            'store_admin' => 'adminhtml'
         );
+        
+        /*
+        $sessionMapping = array(
+            'core' => 'frontend',
+            'customer_base' => 'frontend',
+            'catalog' => 'frontend',
+            'catalogsearch' => 'frontend',
+            'dataflow' => 'frontend',
+            'checkout' => 'frontend',
+            'reports' => 'frontend',
+            'store_default' => 'frontend',
+            'install' => 'frontend',
+            'paypal' => 'frontend',
+            'adminhtml' => 'adminhtml',
+            'admin' => 'adminhtml',
+            'store_admin' => 'adminhtml',
+            'connect' => 'adminhtml',
+            'newsletter' => 'admin',
+            'persistent' => 'frontend',
+            'review' => 'frontend',
+            'rss' => 'frontend',
+            'wishlist' => 'frontend'
+        );
+        */
         
         $this->_namespace = $namespace;
         
