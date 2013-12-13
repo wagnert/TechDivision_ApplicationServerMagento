@@ -103,13 +103,13 @@
 	<!-- ==================================================================== -->
 	<target name="finalize-instance-installation" description="Finalize installation of magento instance.">
 		<echo message="Installing instance ${instance.url} ..." />
-		<exec dir="${instance.dir}" executable="php">
+		<exec dir="${instance.dir}" executable="/opt/appserver/bin/php">
 			<arg line="-f install.php --
 				--license_agreement_accepted yes
 				--locale 'en_US'
 				--timezone 'Europe/Berlin'
 				--default_currency EUR
-				--db_host '${mysql.host}'
+				--db_host ${mysql.host}
 				--db_name ${mysql.database}
 				--db_user ${mysql.username}
 				--db_pass ${mysql.password}

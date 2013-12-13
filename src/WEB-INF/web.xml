@@ -22,7 +22,7 @@
         <description/>
         <display-name>MageServlet</display-name>
         <servlet-name>MageServlet</servlet-name>
-        <servlet-class>TechDivision\ServletContainer\Servlets\Legacy\Mage</servlet-class>
+        <servlet-class>TechDivision\ServletContainer\Servlets\Legacy\MageServlet</servlet-class>
     </servlet>
 
     <servlet-mapping>
