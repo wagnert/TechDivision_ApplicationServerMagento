@@ -1,8 +1,11 @@
 <?xml version="1.0"?>
 <project name="TechDivision_ApplicationServerExample" default="deploy" basedir=".">
+	
     <property file="${basedir}/build.properties"/>
     <property file="${basedir}/build.default.properties"/>
+	
     <property environment="env" />
+	
     <property name="php-src.dir" value="${basedir}/src" />
     <property name="php-test.dir" value="${basedir}/tests" />
     <property name="php-target.dir" value="${basedir}/target"/>
@@ -24,25 +27,10 @@
     <!-- ==================================================================== -->
     <!-- Copies the sources to the target directory							  -->
     <!-- ==================================================================== -->
-    <target name="copy" depends="prepare" description="Copies the sources to the target directory.">
-        <copy todir="${php-target.dir}/${webapp.name}" preservelastmodified="true" overwrite="true">
-            <fileset dir="${php-src.dir}">
-                <include name="**/*.php" />
-                <include name="**/*.yml" />
-                <include name="**/*.xml" />
-                <include name="**/*.xml.*" />
-            </fileset>
-            <filterchain>
-                <expandproperties/>
-            </filterchain>
-        </copy>
+    <target name="copy" description="Copies the sources to the target directory.">
         <copy todir="${php-target.dir}/${webapp.name}" preservelastmodified="true" overwrite="true">
             <fileset dir="${php-src.dir}">
                 <include name="**/*" />
-                <exclude name="**/*.php" />
-                <exclude name="**/*.yml" />
-                <exclude name="**/*.xml" />
-                <exclude name="**/*.xml.*" />
             </fileset>
         </copy>
     </target>
@@ -50,17 +38,26 @@
     <!-- ==================================================================== -->
     <!-- Copies the sources to the deploy directory     					  -->
     <!-- ==================================================================== -->
-    <target name="deploy" depends="copy" description="Copies the sources to the deploy directory.">
+    <target name="deploy" depends="prepare" description="Copies the sources to the deploy directory.">
 		<echo message="Copy sources to ${instance.dir} ..." />
+    	<antcall target="copy" />
         <copy todir="${deploy.dir}" preservelastmodified="true" overwrite="true">
             <fileset dir="${php-target.dir}">
                 <include name="**/*"/>
             </fileset>
         </copy>
-        <exec executable="composer.phar" dir="${deploy.dir}/${webapp.name}">
-            <arg line="update"/>
-        </exec>
     </target>
+
+    <!-- ==================================================================== -->
+    <!-- Creates a PHAR file for deployment     					  		  -->
+    <!-- ==================================================================== -->
+	<target name="create-phar" depends="prepare" description="Creates a PHAR file for deployment.">
+		<antcall target="get-magento-src" />
+    	<antcall target="copy" />
+		<exec executable="phar">
+			<arg line="pack -l 0 -f ${php-target.dir}/${webapp.name}-${magento.version}.phar ${php-target.dir}/${webapp.name}" />
+		</exec>
+	</target>
 
     <!-- ==================================================================== -->
     <!-- Deletes the magento instance for testing purpose   			 	  -->
@@ -79,7 +76,7 @@
 	<target name="init-instance" description="Creats a magento instance for testing purpose">
         <antcall target="prepare" />
         <antcall target="delete-instance"/>
-		<antcall target="get-magento-src"/>
+		<antcall target="prepare-magento-src"/>
 		<antcall target="create-database"/>
 		<antcall target="finalize-instance-installation"/>
 		<antcall target="deploy"/>
@@ -138,10 +135,23 @@
 	<target name="get-magento-src" description="Get Magento sources by given version number.">
         <!-- cloning Magento sources -->
 		<echo message="Clone and prepare Magento CE ${magento.version} source ..."/>
-		<exec dir="${deploy.dir}" executable="git">
+		<exec dir="${php-target.dir}" executable="git">
 			<arg line="clone -b magento-ce-${magento.version} ${magento.repository} ${webapp.name}"/>
 		</exec>
-		<delete dir="${instance.dir}/.git"/>
+		<delete dir="${php-target.dir}/${webapp.name}/.git"/>
+	</target>
+
+	<!-- ==================================================================== -->
+	<!-- Move Magento sources to deploy directory		  		 	  	  	  -->
+	<!-- ==================================================================== -->
+	<target name="prepare-magento-src" description="Move Magento sources to deploy directory.">
+		<!-- download Magento sources -->
+		<antcall target="get-magento-src" />
+        <!-- move Magento sources to deploy directory -->
+		<echo message="Move Magento CE ${magento.version} source to ${deploy.dir}"/>
+		<move todir="${deploy.dir}">
+			<fileset dir="${php-target.dir}/${webapp.name}" />
+		</move>
 	</target>
 
 </project>
