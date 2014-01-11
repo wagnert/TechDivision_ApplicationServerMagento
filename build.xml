@@ -55,7 +55,7 @@
 		<antcall target="get-magento-src" />
     	<antcall target="copy" />
 		<exec executable="phar">
-			<arg line="pack -l 0 -f ${php-target.dir}/${webapp.name}-${magento.version}.phar ${php-target.dir}/${webapp.name}" />
+			<arg line="pack -l 0 -f ${php-target.dir}/${webapp.name}.phar ${php-target.dir}/${webapp.name}" />
 		</exec>
 	</target>
 
@@ -149,7 +149,7 @@
 		<antcall target="get-magento-src" />
         <!-- move Magento sources to deploy directory -->
 		<echo message="Move Magento CE ${magento.version} source to ${deploy.dir}"/>
-		<move todir="${deploy.dir}">
+		<move todir="${deploy.dir}/${webapp.name}">
 			<fileset dir="${php-target.dir}/${webapp.name}" />
 		</move>
 	</target>
