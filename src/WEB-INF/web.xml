@@ -5,64 +5,15 @@
     <description>Mage Servlet</description>
 
     <servlet>
-        <description><![CDATA[A generic servlet that executes usual php scripts.]]></description>
-        <display-name>PhpServlet</display-name>
-        <servlet-name>PhpServlet</servlet-name>
-        <servlet-class>\TechDivision\ServletContainer\Servlets\PhpServlet</servlet-class>
-    </servlet>
-
-    <servlet>
-        <description><![CDATA[A generic servlet that executes usual static content.]]></description>
-        <display-name>StaticResourceServlet</display-name>
-        <servlet-name>StaticResourceServlet</servlet-name>
-        <servlet-class>\TechDivision\ServletContainer\Servlets\StaticResourceServlet</servlet-class>
-    </servlet>
-
-    <servlet>
         <description/>
         <display-name>MageServlet</display-name>
         <servlet-name>MageServlet</servlet-name>
         <servlet-class>TechDivision\ServletContainer\Servlets\Legacy\MageServlet</servlet-class>
     </servlet>
-
-    <servlet-mapping>
-        <servlet-name>PhpServlet</servlet-name>
-        <url-pattern>/errors/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>PhpServlet</servlet-name>
-        <url-pattern>/downloader/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>StaticResourceServlet</servlet-name>
-        <url-pattern>/skin/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>StaticResourceServlet</servlet-name>
-        <url-pattern>/errors/default/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>StaticResourceServlet</servlet-name>
-        <url-pattern>/js/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>StaticResourceServlet</servlet-name>
-        <url-pattern>/media/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>StaticResourceServlet</servlet-name>
-        <url-pattern>/app/etc/local.xml</url-pattern>
-    </servlet-mapping>
  	
     <servlet-mapping>
-        <servlet-name>StaticResourceServlet</servlet-name>
-        <url-pattern>/favicon.ico</url-pattern>
+        <servlet-name>MageServlet</servlet-name>
+        <url-pattern>*.html</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>
