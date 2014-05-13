@@ -51,13 +51,32 @@
     <!-- ==================================================================== -->
     <!-- Creates a PHAR file for deployment     					  		  -->
     <!-- ==================================================================== -->
-	<target name="create-phar" depends="prepare" description="Creates a PHAR file for deployment.">
+	<target name="create-phar" description="Creates a PHAR file for deployment.">
+		<!--
 		<antcall target="get-magento-src" />
     	<antcall target="copy" />
-		<exec executable="phar">
-			<arg line="pack -l 0 -f ${php-target.dir}/${webapp.name}.phar ${php-target.dir}/${webapp.name}" />
-		</exec>
+        -->
+        <!-- install TechDivision_Phar package to create the PHAR archive -->
+        <exec dir="${php-target.dir}" executable="composer">
+            <arg line="require techdivision/phar dev-master" />
+        </exec>
+        <!-- create the PHAR archive itself from the backup sources -->
+        <exec dir="${php-target.dir}" executable="vendor/bin/phar">
+            <arg line="-c create -n ${php-target.dir}/${webapp.name}.phar -d ${php-target.dir}/${webapp.name}"/>
+        </exec>
 	</target>
+
+    <!-- ===================================================================== -->
+    <!-- Copies the .phar file to the appservers deploy directory              -->
+    <!-- ===================================================================== -->
+    <target name="deploy-phar" description="Copies the .phar file to the appservers deploy directory.">
+        <antcall target="create-phar" description="" />
+        <copy file="${php-target.dir}/${webapp.name}.phar" todir="${appserver.base.deploy.dir}" />
+        <delete>
+            <fileset dir="${appserver.base.deploy.dir}" includes="${webapp.name}.phar.*" />
+        </delete>
+        <touch file="${appserver.base.deploy.dir}/${webapp.name}.phar.dodeploy"></touch>
+    </target>
 
     <!-- ==================================================================== -->
     <!-- Deletes the magento instance for testing purpose   			 	  -->
@@ -136,7 +155,7 @@
         <!-- cloning Magento sources -->
 		<echo message="Clone and prepare Magento CE ${magento.version} source ..."/>
 		<exec dir="${php-target.dir}" executable="git">
-			<arg line="clone -b magento-ce-${magento.version} ${magento.repository} ${webapp.name}"/>
+			<arg line="clone -b ${magento.branch} ${magento.repository} ${webapp.name}"/>
 		</exec>
 		<delete dir="${php-target.dir}/${webapp.name}/.git"/>
 	</target>
