@@ -51,11 +51,9 @@
     <!-- ==================================================================== -->
     <!-- Creates a PHAR file for deployment     					  		  -->
     <!-- ==================================================================== -->
-	<target name="create-phar" description="Creates a PHAR file for deployment.">
-		<!--
+	<target name="create-phar" depends="prepare" description="Creates a PHAR file for deployment.">
 		<antcall target="get-magento-src" />
     	<antcall target="copy" />
-        -->
         <!-- install TechDivision_Phar package to create the PHAR archive -->
         <exec dir="${php-target.dir}" executable="composer">
             <arg line="require techdivision/phar dev-master" />
